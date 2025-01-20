@@ -1,4 +1,5 @@
 from ludo_token import LudoToken
+from copy import deepcopy
 
 
 class Player:
@@ -199,6 +200,7 @@ class Player:
 
         self.move_val = self.token_path_indice[self.current_player_color][
                             self.game.events.token_selector] + self.game.dice.dice_val
+        print(f"token: {self.game.events.token_selector}")
         indice_for_tile_to_move_to = self.team_path[self.current_player_color][self.move_val]
         destination_path_tile = self.game.board.movement_path_sprites[indice_for_tile_to_move_to]
 
@@ -211,6 +213,105 @@ class Player:
         self.token_path_indice[self.current_player_color][self.game.events.token_selector] = self.move_val
         self.token_movement_counter[self.current_player_color][
             self.game.events.token_selector] = self.game.events.movement_checker
+
+
+    def move_on_normal_path_ai(self):
+        best_move = AIPlayer(self.game, "red").choose_best_move()
+        self.game.events.movement_checker = self.game.dice.dice_val_holder[-1] + \
+                                            self.token_movement_counter[self.current_player_color][best_move]
+        self.move_val = self.token_path_indice[self.current_player_color][
+                            best_move] + self.game.dice.dice_val_holder[-1]
+        indice_for_tile_to_move_to = self.team_path[self.current_player_color][self.move_val]
+        destination_path_tile = self.game.board.movement_path_sprites[indice_for_tile_to_move_to]
+
+        # Check for collisions here before changing the coordinates of the token
+        self.player_on_player_collision(indice_for_tile_to_move_to)
+
+        token = self.game.player.current_player_token_group[best_move]
+
+        token.rect.x = destination_path_tile.rect.x
+        token.rect.y = destination_path_tile.rect.y
+
+        if self.move_val < self.settings.total_movement_steps:
+            self.token_path_indice[self.current_player_color][best_move] = self.move_val
+            self.token_movement_counter[self.current_player_color][
+                best_move] = self.game.events.movement_checker
+            print(f"token 1 at: {self.token_movement_counter[self.current_player_color][0]}")
+            print(f"token 2 at: {self.token_movement_counter[self.current_player_color][1]}")
+            print(f"token 3 at: {self.token_movement_counter[self.current_player_color][2]}")
+            print(f"token 4 at: {self.token_movement_counter[self.current_player_color][3]}")
+        else:
+            pass
+
+
+    def move_on_winning_path_ai(self):
+        best_move = AIPlayer(self.game, "red").choose_best_move()
+        self.game.events.token_selector = best_move
+
+        # Calculate movement_checker
+        self.game.events.movement_checker = self.game.dice.dice_val_holder[-1] + self.token_movement_counter[self.current_player_color][best_move]
+
+
+        if self.game.events.movement_checker > self.settings.winning_path_threshold:  # This condition works if the dice value is greater than the amount needed to finish with token
+
+            self.game.events.movement_checker -= self.game.dice.dice_val_holder[-1]
+            self.token_movement_counter[self.current_player_color][
+                self.game.events.token_selector] = self.game.events.movement_checker
+
+            if len(self.current_player_token_group) == 1:
+                self.game.dice.dice_val_holder = []
+
+            self.game.menu.skipped_turn_text = "Cannot move with steps that are beyond the dungeon, turn skipped..."
+            self.game.menu.is_turn_skip = True
+
+        elif self.game.events.movement_checker == self.settings.winning_path_threshold:
+            self.current_player_token_group.remove(self.current_player_token_group[self.game.events.token_selector])
+            self.token_movement_counter[self.current_player_color].remove(
+                self.token_movement_counter[self.current_player_color][self.game.events.token_selector])
+            self.token_path_indice[self.current_player_color].remove(
+                self.token_path_indice[self.current_player_color][self.game.events.token_selector])
+            self.current_player_placeholder_group.remove(
+                self.current_player_placeholder_group[self.game.events.token_selector])
+
+            # Check to see if the list is empty for winning
+
+            if not self.current_player_token_group:
+                temp_color = self.current_player_color
+                # Resetting all the players
+                self.game.player.initialize_player_vars()
+
+                # Resetting all the board elements
+                self.game.board.initialize_board_vars()
+
+                # Deleting all the dice elements
+                self.game.dice.initialize_dice_vars()
+
+                # Resetting all the menu elements
+                self.game.menu.initialize_menu_vars()
+
+                # Setting the following variable to true to access the final menu
+                self.game.menu.is_final_menu = True
+
+                self.game.menu.final_menu(temp_color)
+
+                self.game.initialize()
+
+            self.game.menu.skipped_turn_text = "Player " + str(
+                self.current_player) + "'s token has reached the dungeon!"
+            self.game.menu.is_turn_skip = True
+
+
+        else:
+            self.winning_path_mapping_indice = self.game.events.movement_checker - self.settings.total_movement_steps
+            destination_winning_path_tile_indice = self.winning_path[self.current_player_color][
+                self.winning_path_mapping_indice]
+
+            self.current_winning_path_tile_list = self.game.board.winning_path_dict[self.current_player_color]
+
+            destination_winning_path_tile = self.current_winning_path_tile_list[destination_winning_path_tile_indice]
+            self.game.events.ludo_token.rect.x, self.game.events.ludo_token.rect.y = destination_winning_path_tile.rect.x, destination_winning_path_tile.rect.y
+            self.token_movement_counter[self.current_player_color][
+                self.game.events.token_selector] = self.game.events.movement_checker
 
     def move_on_winning_path(self):
         if self.game.events.movement_checker > self.settings.winning_path_threshold:  # This condition works if the dice value is greater than the amount needed to finish with token
@@ -274,6 +375,8 @@ class Player:
             self.token_movement_counter[self.current_player_color][
                 self.game.events.token_selector] = self.game.events.movement_checker
 
+
+
     def player_on_player_collision(self, indice_of_team_path_list):
 
         safe_path_collision_condition = (indice_of_team_path_list == self.settings.red_starting_path) or (
@@ -310,3 +413,109 @@ class Player:
                             self.token_sprite_list[color][current_token_indice] = current_token
                             self.token_path_indice[color][current_token_indice] = 0
                             self.token_movement_counter[color][current_token_indice] = 0
+
+    def check_ai_move(self):
+        move_val = self.game.dice.dice_val_holder[-1] + self.game.player.token_movement_counter[
+            self.game.player.current_player_color][self.game.events.token_selector]
+
+        if move_val < self.settings.total_movement_steps:
+            return (1, move_val)  # Normal path
+        elif move_val == self.settings.total_movement_steps:
+            return (2, move_val)  # Winning path
+        else:
+            return 3  # Cannot move (skip)
+
+
+class AIPlayer(Player):
+    def __init__(self, game, color):
+        super().__init__(game)
+        self.game = game
+        self.color = color
+
+    def choose_best_move(self):
+        """
+        Choose the best token to move using the Expectiminimax algorithm with a heuristic evaluation.
+        """
+        best_move = None
+        best_score = float('-inf')
+        self.game.dice.roll_dice()
+        for token_index in range(len(self.game.player.token_sprite_list[self.color])):
+            if self.can_move_token(token_index):
+                simulated_state = self.get_simulated_state()
+                self.simulate_move(simulated_state, token_index)
+
+                score = self.expectiminimax(simulated_state, depth=2, maximizing_player=False)
+                if score > best_score:
+                    best_score = score
+                    best_move = token_index
+
+        return best_move
+
+    def can_move_token(self, token_index):
+        token_path_index = self.game.player.token_path_indice[self.color][token_index]
+
+        dice_value = self.game.dice.dice_val_holder[-1]
+        return token_path_index + dice_value < len(self.game.player.team_path[self.color])
+
+    def simulate_move(self, state, token_index):
+        """
+        Simulate moving a token for the AI in the given state.
+        """
+        dice_value = state["dice_val"]
+        current_path_index = state["token_path_indice"][self.color][token_index]
+        new_path_index = current_path_index + dice_value
+
+        state["token_path_indice"][self.color][token_index] = new_path_index
+        state["token_movement_counter"][self.color][token_index] += dice_value
+
+    def heuristic(self, state):
+        """
+        Evaluate the game state to guide the AI's decision.
+        """
+        score = 0
+        for path_index in state["token_path_indice"][self.color]:
+            score += path_index  # Reward tokens closer to the goal
+
+        return score
+
+    def expectiminimax(self, state, depth, maximizing_player):
+        """
+        Perform the Expectiminimax algorithm using the minimal state.
+        """
+        if depth == 0:
+            return self.heuristic(state)
+
+        if maximizing_player:
+            max_eval = float('-inf')
+            for token_index in range(len(state["token_path_indice"][self.color])):
+                if self.can_move_token(token_index):
+                    simulated_state = deepcopy(state)
+                    self.simulate_move(simulated_state, token_index)
+                    eval = self.expectiminimax(simulated_state, depth - 1, False)
+                    max_eval = max(max_eval, eval)
+            return max_eval
+
+        else:
+            # Simulate the opponent's moves
+            min_eval = float('inf')
+            for dice_val in range(1, 7):  # Assume uniform dice roll distribution
+                simulated_state = deepcopy(state)
+                simulated_state["dice_val"] = dice_val
+                opponent_color = "yellow"
+                for token_index in range(len(simulated_state["token_path_indice"][opponent_color])):
+                    if simulated_state["token_path_indice"][opponent_color][token_index] + dice_val < len(
+                            simulated_state["token_path_indice"][opponent_color]):
+                        simulated_state["token_path_indice"][opponent_color][token_index] += dice_val
+                        eval = self.heuristic(simulated_state)
+                        min_eval = min(min_eval, eval)
+            return min_eval
+
+    def get_simulated_state(self):
+        """
+        Returns a minimal copy of the game state relevant to the AI's decision-making.
+        """
+        return {
+            "token_path_indice": deepcopy(self.game.player.token_path_indice),
+            "token_movement_counter": deepcopy(self.game.player.token_movement_counter),
+            "dice_val": self.game.dice.dice_val_holder[-1],
+        }

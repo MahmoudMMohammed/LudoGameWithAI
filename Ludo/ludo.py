@@ -1,9 +1,10 @@
 import random
+import time
 
 import pygame
 import sys
 
-from Ludo.ai_player import AIPlayer
+from player import AIPlayer
 from settings import Settings
 from board import Board
 from dice import Dice
@@ -31,22 +32,17 @@ class Ludo:
         pygame.display.set_icon(icon_image)
 
         self.menu = Menu(self)
+        self.ai_player = AIPlayer(self, "red")
         self.player = Player(self)
         self.board = Board(self)
         self.events = Events(self)
         self.dice = Dice(self)
-
-        # Initialize AI player
-        self.ai_player = None
 
     def start_ai_game(self):
         # Initialize players
         self.player.color_for_player = ["red", "yellow"]  # Red for AI, Yellow for human
         self.player.no_of_players = 2
         self.player.initialize_players()
-
-        # Create AI player
-        self.ai_player = AIPlayer(self, "red")
 
         # Set the current player to the human player (yellow)
         self.player.current_player = 1
@@ -67,16 +63,24 @@ class Ludo:
 
             # Check if it's the AI's turn
             if self.player.current_player_color == "red":
-                # Roll the dice for the AI
                 self.dice.roll_dice()
-
                 # Choose the best token to move
                 best_move = self.ai_player.choose_best_move()
+
                 if best_move is not None:
+                    # print(f"best move: {best_move}")
+                    # print(f"token path index: {self.player.token_path_indice}")
+                    # print(f"token_sprite_list: {self.player.token_sprite_list}")
+                    # print(f"token_movement_counter: {self.player.token_movement_counter}")
+                    # print(f"team_path: {self.player.team_path}")
+                    # print(f"current_player_token_group: {self.player.current_player_token_group}")
+                    # print(f"current_player_placeholder_group: {self.player.current_player_placeholder_group}")
+
+
                     # Check if the token is on the winning path or normal path
                     token_index = best_move
                     token_path_index = self.player.token_path_indice["red"][token_index]
-                    dice_value = self.dice.dice_val
+                    dice_value = self.dice.dice_val_holder[-1]
 
                     # Get a list of movable tokens
                     movable_tokens = []
@@ -85,24 +89,28 @@ class Ludo:
                             movable_tokens.append(token_index)
 
                     if movable_tokens:
-                        # Randomly select a token from the movable tokens
-                        selected_token = random.choice(movable_tokens)
-
                         # Set the token selector to the chosen token
-                        self.events.token_selector = selected_token
+                        self.events.token_selector = best_move
 
                         # Determine if the token should move on the normal path or winning path
-                        token_path_index = self.player.token_path_indice["red"][selected_token]
-                        if token_path_index + dice_value >= self.settings.total_movement_steps:
+                        token_path_index = self.player.token_path_indice["red"][best_move]
+                        check_path, check_val = self.player.check_ai_move()
+                        if check_path == 2:
                             # Move on the winning path
-                            self.player.move_on_winning_path()
-                        else:
+                            # self.player.move_on_winning_path()
+                            # print(f"AI moved token {selected_token+1} on winning path, with dice roll {dice_value}.")
+                            pass
+                        elif check_path == 1:
                             # Move on the normal path
-                            self.player.move_on_normal_path()
+                            self.player.move_on_normal_path_ai()
+                            time.sleep(0.5)
+                            print(f"AI moved token {best_move+1} on normal path, with dice roll {dice_value}.")
+                            print("---------------------------------------")
+                        else:
+                            self.menu.skipped_turn_text = "Cannot move with steps that are beyond the dungeon, turn skipped..."
+                            self.menu.is_turn_skip = True
 
-                        print(f"AI moved token {selected_token} with dice roll {dice_value}.")
-
-            # # Switch to the next player (human)
+            # Switch to the next player (human)
             # self.player.change_current_player()
 
             # Draw all the objects onto their respective places
@@ -187,11 +195,6 @@ class Ludo:
 
             # Checks all the inputs for making a move on the board menu
             self._check_events()
-
-            # If it's the AI's turn, make a move
-            if self.player.current_player == 1 and self.ai_player:
-                self.ai_player.make_move()
-                self.player.change_current_player()
 
             # Draw all the objects onto their respective places
             self.draw_sprites()
