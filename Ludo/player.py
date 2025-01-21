@@ -217,10 +217,10 @@ class Player:
 
     def move_on_normal_path_ai(self):
         best_move = AIPlayer(self.game, "red").choose_best_move()
-        self.game.events.movement_checker = self.game.dice.dice_val_holder[-1] + \
+        self.game.events.movement_checker = self.game.dice.get_dice_val() + \
                                             self.token_movement_counter[self.current_player_color][best_move]
         self.move_val = self.token_path_indice[self.current_player_color][
-                            best_move] + self.game.dice.dice_val_holder[-1]
+                            best_move] + self.game.dice.get_dice_val()
         indice_for_tile_to_move_to = self.team_path[self.current_player_color][self.move_val]
         destination_path_tile = self.game.board.movement_path_sprites[indice_for_tile_to_move_to]
 
@@ -236,10 +236,7 @@ class Player:
             self.token_path_indice[self.current_player_color][best_move] = self.move_val
             self.token_movement_counter[self.current_player_color][
                 best_move] = self.game.events.movement_checker
-            print(f"token 1 at: {self.token_movement_counter[self.current_player_color][0]}")
-            print(f"token 2 at: {self.token_movement_counter[self.current_player_color][1]}")
-            print(f"token 3 at: {self.token_movement_counter[self.current_player_color][2]}")
-            print(f"token 4 at: {self.token_movement_counter[self.current_player_color][3]}")
+
         else:
             pass
 
@@ -249,12 +246,12 @@ class Player:
         self.game.events.token_selector = best_move
 
         # Calculate movement_checker
-        self.game.events.movement_checker = self.game.dice.dice_val_holder[-1] + self.token_movement_counter[self.current_player_color][best_move]
+        self.game.events.movement_checker = self.game.dice.get_dice_val() + self.token_movement_counter[self.current_player_color][best_move]
 
 
         if self.game.events.movement_checker > self.settings.winning_path_threshold:  # This condition works if the dice value is greater than the amount needed to finish with token
 
-            self.game.events.movement_checker -= self.game.dice.dice_val_holder[-1]
+            self.game.events.movement_checker -= self.game.dice.get_dice_val()
             self.token_movement_counter[self.current_player_color][
                 self.game.events.token_selector] = self.game.events.movement_checker
 
@@ -415,7 +412,7 @@ class Player:
                             self.token_movement_counter[color][current_token_indice] = 0
 
     def check_ai_move(self):
-        move_val = self.game.dice.dice_val_holder[-1] + self.game.player.token_movement_counter[
+        move_val = self.game.dice.get_dice_val() + self.game.player.token_movement_counter[
             self.game.player.current_player_color][self.game.events.token_selector]
 
         if move_val < self.settings.total_movement_steps:
@@ -423,7 +420,7 @@ class Player:
         elif move_val == self.settings.total_movement_steps:
             return (2, move_val)  # Winning path
         else:
-            return 3  # Cannot move (skip)
+            return (3, move_val)  # Cannot move (skip)
 
 
 class AIPlayer(Player):
@@ -438,7 +435,7 @@ class AIPlayer(Player):
         """
         best_move = None
         best_score = float('-inf')
-        self.game.dice.roll_dice()
+
         for token_index in range(len(self.game.player.token_sprite_list[self.color])):
             if self.can_move_token(token_index):
                 simulated_state = self.get_simulated_state()
@@ -454,7 +451,7 @@ class AIPlayer(Player):
     def can_move_token(self, token_index):
         token_path_index = self.game.player.token_path_indice[self.color][token_index]
 
-        dice_value = self.game.dice.dice_val_holder[-1]
+        dice_value = self.game.dice.get_dice_val()
         return token_path_index + dice_value < len(self.game.player.team_path[self.color])
 
     def simulate_move(self, state, token_index):
@@ -517,5 +514,5 @@ class AIPlayer(Player):
         return {
             "token_path_indice": deepcopy(self.game.player.token_path_indice),
             "token_movement_counter": deepcopy(self.game.player.token_movement_counter),
-            "dice_val": self.game.dice.dice_val_holder[-1],
+            "dice_val": self.game.dice.get_dice_val(),
         }

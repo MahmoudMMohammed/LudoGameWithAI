@@ -61,9 +61,13 @@ class Ludo:
             # Checks all the inputs for making a move on the board menu
             self._check_events()
 
+            self.dice.roll_dice()
+            # self.dice.show_dice()
+            # self.dice.dice_reset()
+
             # Check if it's the AI's turn
             if self.player.current_player_color == "red":
-                self.dice.roll_dice()
+
                 # Choose the best token to move
                 best_move = self.ai_player.choose_best_move()
 
@@ -80,35 +84,33 @@ class Ludo:
                     # Check if the token is on the winning path or normal path
                     token_index = best_move
                     token_path_index = self.player.token_path_indice["red"][token_index]
-                    dice_value = self.dice.dice_val_holder[-1]
+                    dice_value = self.dice.get_dice_val()
 
-                    # Get a list of movable tokens
-                    movable_tokens = []
-                    for token_index, path_index in enumerate(self.player.token_path_indice["red"]):
-                        if path_index + dice_value < len(self.player.team_path["red"]):
-                            movable_tokens.append(token_index)
 
-                    if movable_tokens:
-                        # Set the token selector to the chosen token
-                        self.events.token_selector = best_move
+                    # Set the token selector to the chosen token
+                    self.events.token_selector = best_move
 
-                        # Determine if the token should move on the normal path or winning path
-                        token_path_index = self.player.token_path_indice["red"][best_move]
-                        check_path, check_val = self.player.check_ai_move()
-                        if check_path == 2:
-                            # Move on the winning path
-                            # self.player.move_on_winning_path()
-                            # print(f"AI moved token {selected_token+1} on winning path, with dice roll {dice_value}.")
-                            pass
-                        elif check_path == 1:
-                            # Move on the normal path
-                            self.player.move_on_normal_path_ai()
-                            time.sleep(0.5)
-                            print(f"AI moved token {best_move+1} on normal path, with dice roll {dice_value}.")
-                            print("---------------------------------------")
-                        else:
-                            self.menu.skipped_turn_text = "Cannot move with steps that are beyond the dungeon, turn skipped..."
-                            self.menu.is_turn_skip = True
+                    # Determine if the token should move on the normal path or winning path
+                    token_path_index = self.player.token_path_indice["red"][best_move]
+                    check_path, check_val = self.player.check_ai_move()
+                    if check_path == 2:
+                        # Move on the winning path
+                        # self.player.move_on_winning_path()
+                        # print(f"AI moved token {selected_token+1} on winning path, with dice roll {dice_value}.")
+                        pass
+                    elif check_path == 1:
+                        # Move on the normal path
+                        self.player.move_on_normal_path_ai()
+                        # time.sleep(3)
+                        print(f"AI moved token {best_move+1} on normal path, with dice roll {dice_value}.")
+                        print(f"token 1 at: {self.player.token_movement_counter[self.player.current_player_color][0]}")
+                        print(f"token 2 at: {self.player.token_movement_counter[self.player.current_player_color][1]}")
+                        print(f"token 3 at: {self.player.token_movement_counter[self.player.current_player_color][2]}")
+                        print(f"token 4 at: {self.player.token_movement_counter[self.player.current_player_color][3]}")
+                        print("---------------------------------------")
+                    else:
+                        self.menu.skipped_turn_text = "Cannot move with steps that are beyond the dungeon, turn skipped..."
+                        self.menu.is_turn_skip = True
 
             # Switch to the next player (human)
             # self.player.change_current_player()

@@ -152,3 +152,6 @@ class Dice:
             self.game.menu.roll_the_dice_button_color = self.settings.WHITE  # Reverting the roll the dice button color back to white for a smooth transition
 
         self.game.player.change_current_player()
+
+    def get_dice_val(self):
+        return self.dice_val_holder[len(self.dice_val_holder) -1]
