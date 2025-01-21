@@ -305,8 +305,10 @@ class Player:
 
             self.current_winning_path_tile_list = self.game.board.winning_path_dict[self.current_player_color]
 
+            token = self.game.player.current_player_token_group[best_move]
+
             destination_winning_path_tile = self.current_winning_path_tile_list[destination_winning_path_tile_indice]
-            self.game.events.ludo_token.rect.x, self.game.events.ludo_token.rect.y = destination_winning_path_tile.rect.x, destination_winning_path_tile.rect.y
+            token.rect.x, token.rect.y = destination_winning_path_tile.rect.x, destination_winning_path_tile.rect.y
             self.token_movement_counter[self.current_player_color][
                 self.game.events.token_selector] = self.game.events.movement_checker
 
@@ -411,13 +413,13 @@ class Player:
                             self.token_path_indice[color][current_token_indice] = 0
                             self.token_movement_counter[color][current_token_indice] = 0
 
-    def check_ai_move(self):
+    def check_ai_move(self, token):
         move_val = self.game.dice.get_dice_val() + self.game.player.token_movement_counter[
-            self.game.player.current_player_color][self.game.events.token_selector]
+            self.game.player.current_player_color][token]
 
         if move_val < self.settings.total_movement_steps:
             return (1, move_val)  # Normal path
-        elif move_val == self.settings.total_movement_steps:
+        elif self.settings.total_movement_steps <= move_val <= self.settings.winning_path_threshold:
             return (2, move_val)  # Winning path
         else:
             return (3, move_val)  # Cannot move (skip)
