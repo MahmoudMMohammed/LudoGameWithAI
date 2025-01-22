@@ -18,6 +18,7 @@ class Dice:
     def roll_dice(self):
         random.seed()
         dice_val = random.randint(1, 6)
+        print(f"player {self.game.player.current_player} rolled")
 
         if dice_val != 6 or dice_val == 6 and self.roll_check >= self.total_rolls - 1:
             self.dice_val_holder.append(dice_val)
@@ -145,6 +146,79 @@ class Dice:
                         self.game.events.highlight_token_on_board_mouse_event()
                     elif event.type == pygame.QUIT:
                         sys.exit()
+
+                self.game.draw_sprites()
+                pygame.display.flip()
+
+            self.game.menu.roll_the_dice_button_color = self.settings.WHITE  # Reverting the roll the dice button color back to white for a smooth transition
+
+        self.game.player.change_current_player()
+
+    def show_dice_for_ai(self):
+
+        if self.dice_val_holder.count(6) == 3:
+            self.game.menu.skipped_turn_text = "Obtained six three times, turn skipped..."
+            self.game.menu.is_turn_skip = True
+            return
+
+        # This for loop is iterating through all the dice values
+        for self.dice_val in self.dice_val_holder:
+            # Draw the dice
+            self.current_dice_image, self.current_dice_rect = self.dice_image_holder[self.dice_val - 1]
+
+            # chooses the color, tokens and placeholders for the current player to be used in the events class
+            self.game.player.current_player_properties_initialization()
+
+            # This function and the condition is just to see when the value of the dice is less than 6 and if all the tokens are in their respective placeholder positions, a turn shouldnt take place
+            base_token_counter = self.game.board.check_tokens_in_base()
+            if base_token_counter == self.game.board.total_tokens:
+                self.game.menu.skipped_turn_text = "Dice value less than 6, turn skipped..."
+                self.game.menu.is_turn_skip = True
+                continue
+
+            self.current_text_color = self.settings.token_color_dictionary[
+                self.game.player.current_player_color]  # Choosing the color for the text to be displayed on screen based on the current player
+
+            self.current_turn = True
+            while self.current_turn:
+
+                self.game.screen.fill(self.settings.board_menu_bg_color)
+
+                # Drawing the text before actually drawing the dice_shower_text
+                dice_shower_text = f"Player {self.game.player.current_player} drew a {self.dice_val}."
+                dice_shower_coordinates = (
+                self.settings.screen_center, self.current_dice_rect.y + 3 * self.settings.box_size)
+                dice_shower_rect = self.settings.translucent_background_setter(25, dice_shower_text,
+                                                                               dice_shower_coordinates, "n")
+                dice_shower_background_surface = self.settings.draw_translucent_background(dice_shower_rect)
+                self.screen.blit(dice_shower_background_surface, dice_shower_rect.topleft)
+
+                self.settings.draw_text(dice_shower_text, self.settings.MAIN_MENU_FONT_PATH, 25,
+                                        self.current_text_color, dice_shower_coordinates[0], dice_shower_coordinates[1],
+                                        "n", True)
+                self.game.screen.blit(self.current_dice_image, self.current_dice_rect)
+
+                # Draw the translucent background before drawing token_chooser_text
+                token_chooser_text = "Please choose your token!"
+                token_chooser_coordinates = (
+                self.settings.screen_center, self.current_dice_rect.y + 4 * self.settings.box_size)
+                token_chooser_rect = self.settings.translucent_background_setter(20, token_chooser_text,
+                                                                                 token_chooser_coordinates, "n")
+                token_chooser_background_surface = self.settings.draw_translucent_background(token_chooser_rect)
+                self.screen.blit(token_chooser_background_surface, token_chooser_rect.topleft)
+
+                self.settings.draw_text(token_chooser_text, self.settings.MAIN_MENU_FONT_PATH, 20,
+                                        self.current_text_color, token_chooser_coordinates[0],
+                                        token_chooser_coordinates[1], "n", True)
+
+                button_center = self.game.menu.roll_dice_button_rect.center
+                self.game.events.on_roll_dice_button_click(pygame.event.Event(pygame.MOUSEBUTTONDOWN,
+                                                                         {'pos': (button_center), 'button': 1,
+                                                                          'touch': False, 'window': None}))
+                for event in pygame.event.get():
+                    if event.type == pygame.MOUSEBUTTONDOWN:
+                        self.game.events.choose_token_on_board_ai_event()
+
 
                 self.game.draw_sprites()
                 pygame.display.flip()

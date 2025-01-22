@@ -52,6 +52,7 @@ class Ludo:
         self.run_ai_game()
 
     def run_ai_game(self):
+        clicks = 0
         while True:
             self.screen.fill(self.settings.board_menu_bg_color)
 
@@ -61,57 +62,37 @@ class Ludo:
             # Checks all the inputs for making a move on the board menu
             self._check_events()
 
-
             # Check if it's the AI's turn
-            if self.player.current_player_color == "red":
-                self.dice.roll_dice()
-                self.dice.dice_val = self.dice.get_dice_val()
+            if self.player.current_player == 1:
+                button_center = self.menu.roll_dice_button_rect.center
+                self.events.on_roll_dice_button_click(pygame.event.Event(pygame.MOUSEBUTTONDOWN,
+                                                                         {'pos': (button_center), 'button': 1,
+                                                                          'touch': False, 'window': None}))
+                clicks += 1
+                print(clicks)
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        pygame.quit()
+                        exit()
 
-                print(f"got roll: {self.dice.dice_val}")
+                    # Check for the mouse button click event
+                    if event.type == pygame.MOUSEBUTTONDOWN:
+                        mouse_pos = event.pos
+                        if self.menu.roll_dice_button_rect.collidepoint(mouse_pos):
+                            self.dice.roll_dice()
+                            self.dice.dice_val = self.dice.get_dice_val()
+                            print(f"AI got roll: {self.dice.dice_val}")
+                            # time.sleep(1)
+                            self.dice.show_dice_for_ai()
+                            self.dice.dice_reset()
 
-                # Choose the best token to move
-                best_move = self.ai_player.choose_best_move()
-
-                if best_move is not None:
-
-                    dice_value = self.dice.get_dice_val()
-
-                    # Set the token selector to the chosen token
-                    self.events.token_selector = best_move
-                    self.events.ludo_token = self.player.current_player_token_group[best_move]
-
-                    # Determine if the token should move on the normal path or winning path
-                    check_path, check_val = self.player.check_ai_move(self.events.token_selector)
-                    print(f"path: {check_path}")
-                    print(f"val: {check_val}")
-
-                    if check_path == 0:
-                        self.menu.skipped_turn_text = "Dice value less than 6, turn skipped..."
-                        self.menu.is_turn_skip = True
-                        self.dice.dice_reset()
-
-                    if check_path == 1:
-                        # Move on the normal path
-                        self.player.move_on_normal_path_ai()
-                        print(f"AI moved token {best_move+1} on normal path, with dice roll {dice_value}.")
-
-                    if check_path == 2:
-                        # Move on the winning path
-                        self.player.move_on_winning_path_ai()
-                        print(f"AI moved token {best_move+1} on winning path, with dice roll {dice_value}.")
-
-                    if check_path == 6:
-                        self.player.current_player_on_start_path()
-                    print("---------------------------------------")
-
-                else:
-                    print("No movable tokens!")
-                    print("---------------------------------------")
-            time.sleep(1)
-
-
-            # Switch to the next player (human)
-            # self.player.change_current_player()
+            if self.player.current_player == 2:
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        pygame.quit()
+                        exit()
+                    if event.type == pygame.MOUSEBUTTONDOWN:
+                        self.events.check_mouse_board_menu_event(event)
 
             # Draw all the objects onto their respective places
             self.draw_sprites()

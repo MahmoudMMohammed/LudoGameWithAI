@@ -200,7 +200,6 @@ class Player:
 
         self.move_val = self.token_path_indice[self.current_player_color][
                             self.game.events.token_selector] + self.game.dice.dice_val
-        print(f"token: {self.game.events.token_selector}")
         indice_for_tile_to_move_to = self.team_path[self.current_player_color][self.move_val]
         destination_path_tile = self.game.board.movement_path_sprites[indice_for_tile_to_move_to]
 

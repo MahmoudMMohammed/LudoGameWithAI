@@ -330,7 +330,90 @@ class Events:
 
                 self.game.board.draw_on_tiles = True
 
+    def choose_token_on_board_ai_event(self):
+
+        best_move = self.game.ai_player.choose_best_move()
+        token = self.game.player.current_player_token_group[best_move]
+        token_center = (token.rect.x, token.rect.y)  # Token's position for simulating the click
+
+        # Simulate MOUSEBUTTONDOWN event to simulate a click at the token's position
+        ai_click_event = pygame.event.Event(pygame.MOUSEBUTTONDOWN,
+                                            {'pos': (token_center), 'button': 1, 'touch': False, 'window': None})
+
+        # Post the event to the pygame event queue
+        pygame.event.post(ai_click_event)
+
+        print(f"AI selected token: {token_center}")
+
+        # After posting the click event, allow the normal flow to handle the input
+        self.mouse_pos = token_center  # Update mouse position to token's center
+        state_of_buttons = pygame.mouse.get_pressed()  # Get the current state of mouse buttons
+
+        token_checker = 0
+        for self.token_selector, self.ludo_token in enumerate(self.game.player.current_player_token_group):
+            if token_checker == 1:
+                break
+
+            # Checking if the token is clicked
+            if self.ludo_token.rect.collidepoint(self.mouse_pos):
+                self.placeholder_sprite = self.game.player.current_player_placeholder_group[self.token_selector]
+
+                # If the token is on the placeholder, check if it can be moved to the starting path
+                if self.ludo_token.rect.x == self.placeholder_sprite.rect.x and self.ludo_token.rect.y == self.placeholder_sprite.rect.y:
+                    if self.game.dice.dice_val < 6:
+                        self.settings.draw_text("Sorry you cannot choose this token!",
+                                                self.settings.MAIN_MENU_FONT_PATH, 20, self.settings.BLACK,
+                                                self.settings.screen_center,
+                                                self.game.dice.current_dice_rect.y + 5 * self.settings.box_size, "n",
+                                                True)
+                        self.game.draw_sprites()
+                        pygame.display.flip()
+                        time.sleep(1)  # Show message for 1 second
+                        return  # Exit function, do not set current_turn to False yet
+
+                    else:
+                        # Move the token to the starting path
+                        self.game.player.current_player_on_start_path()
+                        self.settings.draw_text(
+                            f"Player {self.game.player.current_player} chose their {self.token_selector + 1} token!",
+                            self.settings.MAIN_MENU_FONT_PATH, 15, self.game.dice.current_text_color,
+                            self.settings.screen_center,
+                            self.game.dice.current_dice_rect.y + 5 * self.settings.box_size, "n", True)
+                        self.game.dice.current_turn = False  # End turn after moving the token
+
+                # Handle normal path and winning path movement
+                else:
+                    self.movement_checker = self.game.dice.dice_val + self.game.player.token_movement_counter[
+                        self.game.player.current_player_color][self.token_selector]
+
+                    if self.movement_checker < self.settings.total_movement_steps:  # Move token on normal path
+                        self.game.player.move_on_normal_path()
+                        self.settings.draw_text(
+                            f"Player {self.game.player.current_player} chose their {self.game.player.current_player_color} token!",
+                            self.settings.MAIN_MENU_FONT_PATH, 15, self.game.dice.current_text_color,
+                            self.settings.screen_center,
+                            self.game.dice.current_dice_rect.y + 5 * self.settings.box_size, "n", True)
+                    else:  # Move token on winning path
+                        self.game.player.move_on_winning_path()
+                        self.settings.draw_text(
+                            f"Player {self.game.player.current_player} chose their {self.game.player.current_player_color} token!",
+                            self.settings.MAIN_MENU_FONT_PATH, 15, self.game.dice.current_text_color,
+                            self.settings.screen_center,
+                            self.game.dice.current_dice_rect.y + 5 * self.settings.box_size, "n", True)
+
+                    token_checker += 1
+                    self.game.dice.current_turn = False  # End turn after valid move
+
+                self.game.board.draw_on_tiles = False  # Ensure highlighted tiles are cleared after the turn
+
+                self.game.draw_sprites()
+                pygame.display.flip()
+                time.sleep(1)  # Show results for 1 second
+
     def check_keyboard_final_menu_event(self):
         if self.game.menu.is_final_menu:
             self.game.menu.is_final_menu = False
 
+
+    def on_roll_dice_button_click(self, event):
+        pygame.event.post(event)
