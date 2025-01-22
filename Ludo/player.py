@@ -214,7 +214,6 @@ class Player:
         self.token_movement_counter[self.current_player_color][
             self.game.events.token_selector] = self.game.events.movement_checker
 
-
     def move_on_normal_path_ai(self):
         best_move = AIPlayer(self.game, "red").choose_best_move()
         self.game.events.movement_checker = self.game.dice.get_dice_val() + \
@@ -237,17 +236,13 @@ class Player:
             self.token_movement_counter[self.current_player_color][
                 best_move] = self.game.events.movement_checker
 
-        else:
-            pass
-
-
     def move_on_winning_path_ai(self):
         best_move = AIPlayer(self.game, "red").choose_best_move()
         self.game.events.token_selector = best_move
 
         # Calculate movement_checker
-        self.game.events.movement_checker = self.game.dice.get_dice_val() + self.token_movement_counter[self.current_player_color][best_move]
-
+        self.game.events.movement_checker = self.game.dice.get_dice_val() + \
+                                            self.token_movement_counter[self.current_player_color][best_move]
 
         if self.game.events.movement_checker > self.settings.winning_path_threshold:  # This condition works if the dice value is greater than the amount needed to finish with token
 
@@ -305,10 +300,10 @@ class Player:
 
             self.current_winning_path_tile_list = self.game.board.winning_path_dict[self.current_player_color]
 
-            token = self.game.player.current_player_token_group[best_move]
+            self.game.events.ludo_token = self.game.player.current_player_token_group[best_move]
 
             destination_winning_path_tile = self.current_winning_path_tile_list[destination_winning_path_tile_indice]
-            token.rect.x, token.rect.y = destination_winning_path_tile.rect.x, destination_winning_path_tile.rect.y
+            self.game.events.ludo_token.rect.x, self.game.events.ludo_token.rect.y = destination_winning_path_tile.rect.x, destination_winning_path_tile.rect.y
             self.token_movement_counter[self.current_player_color][
                 self.game.events.token_selector] = self.game.events.movement_checker
 
@@ -374,8 +369,6 @@ class Player:
             self.token_movement_counter[self.current_player_color][
                 self.game.events.token_selector] = self.game.events.movement_checker
 
-
-
     def player_on_player_collision(self, indice_of_team_path_list):
 
         safe_path_collision_condition = (indice_of_team_path_list == self.settings.red_starting_path) or (
@@ -414,12 +407,25 @@ class Player:
                             self.token_movement_counter[color][current_token_indice] = 0
 
     def check_ai_move(self, token):
+        if self.game.dice.get_dice_val() != 6:
+            base_token_counter = self.game.board.check_tokens_in_base()
+            if base_token_counter == self.game.board.total_tokens:
+                return (0, 0)
+
+        token_in_base = False
+        placeholder_sprite = self.game.player.current_player_placeholder_group[token]
+        if self.game.events.ludo_token.rect.x == placeholder_sprite.rect.x and self.game.events.ludo_token.rect.y == placeholder_sprite.rect.y:
+            token_in_base = True
+
+        if self.game.dice.get_dice_val() == 6 and token_in_base:
+            return (6, 6)
+
         move_val = self.game.dice.get_dice_val() + self.game.player.token_movement_counter[
             self.game.player.current_player_color][token]
 
         if move_val < self.settings.total_movement_steps:
             return (1, move_val)  # Normal path
-        elif self.settings.total_movement_steps <= move_val <= self.settings.winning_path_threshold:
+        elif move_val <= self.settings.winning_path_threshold:
             return (2, move_val)  # Winning path
         else:
             return (3, move_val)  # Cannot move (skip)
@@ -443,7 +449,8 @@ class AIPlayer(Player):
                 simulated_state = self.get_simulated_state()
                 self.simulate_move(simulated_state, token_index)
 
-                score = self.expectiminimax(simulated_state, depth=2, maximizing_player=False)
+                score = self.expectiminimax(simulated_state, depth=self.game.dice.get_dice_val(),
+                                            maximizing_player=False)
                 if score > best_score:
                     best_score = score
                     best_move = token_index

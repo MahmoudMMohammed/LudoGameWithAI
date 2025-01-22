@@ -65,46 +65,50 @@ class Ludo:
             # Check if it's the AI's turn
             if self.player.current_player_color == "red":
                 self.dice.roll_dice()
+                self.dice.dice_val = self.dice.get_dice_val()
+
+                print(f"got roll: {self.dice.dice_val}")
 
                 # Choose the best token to move
                 best_move = self.ai_player.choose_best_move()
 
                 if best_move is not None:
-                    # print(f"best move: {best_move}")
-                    # print(f"token path index: {self.player.token_path_indice}")
-                    # print(f"token_sprite_list: {self.player.token_sprite_list}")
-                    # print(f"token_movement_counter: {self.player.token_movement_counter}")
-                    # print(f"team_path: {self.player.team_path}")
-                    # print(f"current_player_token_group: {self.player.current_player_token_group}")
-                    # print(f"current_player_placeholder_group: {self.player.current_player_placeholder_group}")
 
                     dice_value = self.dice.get_dice_val()
 
                     # Set the token selector to the chosen token
                     self.events.token_selector = best_move
+                    self.events.ludo_token = self.player.current_player_token_group[best_move]
 
                     # Determine if the token should move on the normal path or winning path
                     check_path, check_val = self.player.check_ai_move(self.events.token_selector)
                     print(f"path: {check_path}")
                     print(f"val: {check_val}")
+
+                    if check_path == 0:
+                        self.menu.skipped_turn_text = "Dice value less than 6, turn skipped..."
+                        self.menu.is_turn_skip = True
+                        self.dice.dice_reset()
+
+                    if check_path == 1:
+                        # Move on the normal path
+                        self.player.move_on_normal_path_ai()
+                        print(f"AI moved token {best_move+1} on normal path, with dice roll {dice_value}.")
+
                     if check_path == 2:
                         # Move on the winning path
                         self.player.move_on_winning_path_ai()
                         print(f"AI moved token {best_move+1} on winning path, with dice roll {dice_value}.")
-                        pass
-                    elif check_path == 1:
-                        # Move on the normal path
-                        self.player.move_on_normal_path_ai()
-                        # time.sleep(3)
-                        print(f"AI moved token {best_move+1} on normal path, with dice roll {dice_value}.")
-                        # print(f"token 1 at: {self.player.token_movement_counter[self.player.current_player_color][0]}")
-                        # print(f"token 2 at: {self.player.token_movement_counter[self.player.current_player_color][1]}")
-                        # print(f"token 3 at: {self.player.token_movement_counter[self.player.current_player_color][2]}")
-                        # print(f"token 4 at: {self.player.token_movement_counter[self.player.current_player_color][3]}")
-                        print("---------------------------------------")
-                    else:
-                        self.menu.skipped_turn_text = "Cannot move with steps that are beyond the dungeon, turn skipped..."
-                        self.menu.is_turn_skip = True
+
+                    if check_path == 6:
+                        self.player.current_player_on_start_path()
+                    print("---------------------------------------")
+
+                else:
+                    print("No movable tokens!")
+                    print("---------------------------------------")
+            time.sleep(1)
+
 
             # Switch to the next player (human)
             # self.player.change_current_player()
