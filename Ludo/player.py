@@ -439,18 +439,26 @@ class AIPlayer(Player):
 
     def choose_best_move(self):
         """
-        Decide the best token to move based on the heuristic score.
+        Decide the best token to move using the Expectiminimax algorithm.
         """
         best_score = float('-inf')
         best_move = None
 
-        for token_index, token in enumerate(self.game.player.current_player_placeholder_group):
-            dice_value = self.game.dice.dice_val
-            heuristic_score = self.calculate_heuristic(token_index, dice_value)
+        # Get the current simulated state of the game
+        current_state = self.get_simulated_state()
 
-            if heuristic_score > best_score:
-                best_score = heuristic_score
-                best_move = token_index
+        for token_index, token in enumerate(self.game.player.current_player_placeholder_group):
+            if self.can_move_token(token_index):
+                # Simulate the move for this token
+                simulated_state = deepcopy(current_state)
+                self.simulate_move(simulated_state, token_index)
+
+                # Use the Expectiminimax algorithm to evaluate this move
+                score = self.expectiminimax(simulated_state, depth=2, maximizing_player=False)
+
+                if score > best_score:
+                    best_score = score
+                    best_move = token_index
 
         return best_move
 
