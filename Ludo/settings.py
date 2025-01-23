@@ -136,6 +136,7 @@ class Settings:
         self.green_safe_cell = 5
         self.blue_safe_cell = 46
         self.yellow_safe_cell = 29
+        self.safe_spots = [22, 5, 46, 29, 4, 37, 47, 29]
 
     def draw_text(self, text, font_path, size, color, x, y, align, isDraw):
         font = pygame.font.Font(font_path, size)

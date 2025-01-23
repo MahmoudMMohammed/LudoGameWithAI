@@ -45,7 +45,7 @@ class Ludo:
         self.player.initialize_players()
 
         # Set the current player to the human player (yellow)
-        self.player.current_player = 1
+        self.player.current_player = 2
         self.player.current_player_properties_initialization()
 
         # Start the game loop
@@ -68,8 +68,8 @@ class Ludo:
                 self.events.on_roll_dice_button_click(pygame.event.Event(pygame.MOUSEBUTTONDOWN,
                                                                          {'pos': (button_center), 'button': 1,
                                                                           'touch': False, 'window': None}))
-                clicks += 1
-                print(clicks)
+                # clicks += 1
+                # print(clicks)
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
                         pygame.quit()

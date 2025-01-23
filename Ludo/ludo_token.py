@@ -30,3 +30,21 @@ class LudoToken:
 
     def draw(self, surface):
         surface.blit(self.image, self.rect)
+
+    def is_in_base(self):
+        # Find the index of the current token in the token group
+        try:
+            token_index = self.game.player.current_player_token_group.index(self)
+        except ValueError:
+            # If the token is not in the group, it cannot be in base
+            return False
+
+        # Get the placeholder sprite for this token
+        placeholder_sprite = self.game.player.current_player_placeholder_group[token_index]
+
+        # Check if the token's position matches the placeholder's position
+        if self.rect.x == placeholder_sprite.rect.x and self.rect.y == placeholder_sprite.rect.y:
+            return True
+        else:
+            return False
+

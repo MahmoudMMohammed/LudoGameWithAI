@@ -18,7 +18,7 @@ class Dice:
     def roll_dice(self):
         random.seed()
         dice_val = random.randint(1, 6)
-        print(f"player {self.game.player.current_player} rolled")
+        # print(f"player {self.game.player.current_player} rolled")
 
         if dice_val != 6 or dice_val == 6 and self.roll_check >= self.total_rolls - 1:
             self.dice_val_holder.append(dice_val)

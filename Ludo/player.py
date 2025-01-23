@@ -238,6 +238,7 @@ class Player:
     def move_on_winning_path_ai(self):
         best_move = AIPlayer(self.game, "red").choose_best_move()
         self.game.events.token_selector = best_move
+        self.game.events.ludo_token = self.game.player.current_player_placeholder_group[best_move]
 
         # Calculate movement_checker
         self.game.events.movement_checker = self.game.dice.get_dice_val() + \
@@ -438,21 +439,18 @@ class AIPlayer(Player):
 
     def choose_best_move(self):
         """
-        Choose the best token to move using the Expectiminimax algorithm with a heuristic evaluation.
+        Decide the best token to move based on the heuristic score.
         """
-        best_move = None
         best_score = float('-inf')
+        best_move = None
 
-        for token_index in range(len(self.game.player.token_sprite_list[self.color])):
-            if self.can_move_token(token_index):
-                simulated_state = self.get_simulated_state()
-                self.simulate_move(simulated_state, token_index)
+        for token_index, token in enumerate(self.game.player.current_player_placeholder_group):
+            dice_value = self.game.dice.dice_val
+            heuristic_score = self.calculate_heuristic(token_index, dice_value)
 
-                score = self.expectiminimax(simulated_state, depth=self.game.dice.get_dice_val(),
-                                            maximizing_player=False)
-                if score > best_score:
-                    best_score = score
-                    best_move = token_index
+            if heuristic_score > best_score:
+                best_score = heuristic_score
+                best_move = token_index
 
         return best_move
 
@@ -473,22 +471,116 @@ class AIPlayer(Player):
         state["token_path_indice"][self.color][token_index] = new_path_index
         state["token_movement_counter"][self.color][token_index] += dice_value
 
-    def heuristic(self, state):
+    def calculate_heuristic(self, token, dice_value):
         """
         Evaluate the game state to guide the AI's decision.
         """
         score = 0
-        for path_index in state["token_path_indice"][self.color]:
-            score += path_index  # Reward tokens closer to the goal
+        ludo_token = self.game.player.current_player_token_group[token]
+        # current_position_index = self.game.player.token_movement_counter[self.game.player.current_player_color][token]
+        # current_position = self.game.player.team_path["red"][current_position_index]
+        # print(f"current position: {current_position}")
+
+        # 1. Move out of base
+        if ludo_token.is_in_base() and dice_value == 6:
+            score += 80  # High priority to move out of base
+
+
+        # 2. Move to a safe place
+        # target_index = current_position + dice_value
+        # print(f"traget inex = {target_index}")
+        # target_position = self.game.player.team_path["red"][target_index]
+        # if self.is_safe_position(target_position):
+        #     score += 50  # Safe places have medium priority
+
+        # 3. Avoid being taken down
+        if self.is_in_danger_position(token, dice_value):
+            score -= 75  # Avoid dangerous moves
+
+        # 4. Take down an opponent
+        if self.can_take_down_opponent(token, dice_value):
+            score += 100  # High priority to take down an opponent
+
+        # 5. Move to winning path
+        if self.is_near_winning_path(token, dice_value):
+            score += 70  # Priority to move tokens to safety
 
         return score
+
+    def is_safe_position(self, position):
+        # Check if the position is a safe zone or out of reach of opponents
+        return position in self.settings.safe_spots
+
+    def is_in_danger_position(self, token, dice_value):
+        """
+        Check if moving to the target position puts the token in danger.
+        """
+
+        opponents_tokens_positions_index = []
+        for token_index, _ in enumerate(self.game.player.token_sprite_list["yellow"]):
+            opponents_tokens_positions_index.append(
+                self.game.player.token_movement_counter["yellow"][token_index])
+
+        opponents_tokens_positions = []
+        for position in opponents_tokens_positions_index:
+            target_position = self.game.player.team_path["yellow"][position]
+            opponents_tokens_positions.append(target_position)
+
+        # Check if any opponent token can reach the target position
+        for opp in opponents_tokens_positions:
+            target_position_index = self.game.dice.dice_val + self.game.player.token_movement_counter[
+                        self.game.player.current_player_color][token]
+            target_position = self.game.player.team_path["yellow"][target_position_index]
+            opp_position_index = self.game.player.token_movement_counter["yellow"][token]
+            if 0 < abs(opp_position_index - target_position) <= 6:  # Opponent can take down within dice range
+                return True
+
+        return False
+
+    def can_take_down_opponent(self, token, dice_value):
+        """
+        Check if the move lands on an opponent's token position.
+        """
+        # Calculate the target position index for the current token
+        current_position_index = self.game.player.token_movement_counter[self.game.player.current_player_color][token]
+        target_position_index = current_position_index + dice_value
+        target_position = self.game.player.team_path[self.game.player.current_player_color][target_position_index]
+
+        # Get all opponent tokens' positions
+        opponents_tokens_positions_index = []
+        for token_index, opp_token in enumerate(self.game.player.token_sprite_list["yellow"]):
+            opponents_tokens_positions_index.append(
+                self.game.player.token_movement_counter["yellow"][token_index]
+            )
+
+        opponents_tokens_positions = []
+        for position_index in opponents_tokens_positions_index:
+            position = self.game.player.team_path["yellow"][position_index]
+            opponents_tokens_positions.append(position)
+
+        # Check if the target position matches any opponent token's position
+        for opp_position in opponents_tokens_positions:
+            if target_position == opp_position:
+                return True
+
+        return False
+
+    def is_near_winning_path(self, token, dice_val):
+        # Check if the token is close to entering the winning path
+        movement_checker = dice_val + self.game.player.token_movement_counter[
+                        self.game.player.current_player_color][token]
+        return movement_checker >= self.settings.total_movement_steps
 
     def expectiminimax(self, state, depth, maximizing_player):
         """
         Perform the Expectiminimax algorithm using the minimal state.
         """
         if depth == 0:
-            return self.heuristic(state)
+            # Evaluate the state using the heuristic function
+            return sum(
+                self.calculate_heuristic(token_index, state["dice_val"])
+                for token_index in range(len(state["token_path_indice"][self.color]))
+            )
 
         if maximizing_player:
             max_eval = float('-inf')
@@ -503,15 +595,16 @@ class AIPlayer(Player):
         else:
             # Simulate the opponent's moves
             min_eval = float('inf')
-            for dice_val in range(1, 7):  # Assume uniform dice roll distribution
+            opponent_color = "yellow"  # Assuming one opponent for now
+            for dice_val in range(1, 7):  # Dice roll simulation
                 simulated_state = deepcopy(state)
                 simulated_state["dice_val"] = dice_val
-                opponent_color = "yellow"
+
                 for token_index in range(len(simulated_state["token_path_indice"][opponent_color])):
                     if simulated_state["token_path_indice"][opponent_color][token_index] + dice_val < len(
                             simulated_state["token_path_indice"][opponent_color]):
                         simulated_state["token_path_indice"][opponent_color][token_index] += dice_val
-                        eval = self.heuristic(simulated_state)
+                        eval = self.expectiminimax(simulated_state, depth - 1, True)
                         min_eval = min(min_eval, eval)
             return min_eval
 

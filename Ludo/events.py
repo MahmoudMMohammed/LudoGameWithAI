@@ -220,7 +220,6 @@ class Events:
                         self.game.draw_sprites()
                         pygame.display.flip()
                         time.sleep(1)  # Wait for 1 second to show the message
-                        # Do not set current_turn to False here
                         return  # Exit the function without ending the turn
 
                     else:
